@@ -43,6 +43,6 @@ fun Greeting(name: String, modifier: Modifier = Modifier, npm: String) {
 @Composable
 fun GreetingPreview() {
     PrakTAM_2417051065Theme {
-        Greeting(name = "Android", npm = "2417051065")
+        Greeting(name = "Maulana Ramadhan", npm = "2417051065")
     }
 }
