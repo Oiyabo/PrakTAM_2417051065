@@ -2,11 +2,11 @@ package com.example.praktam_2417051065
 
 //import Model.FirstScr
 import Model.ScndScr
-import android.media.Image
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -14,6 +14,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.praktam_2417051065.ui.theme.PrakTAM_2417051065Theme
@@ -26,7 +27,7 @@ class MainActivity : ComponentActivity() {
             PrakTAM_2417051065Theme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
-
+                        modifier = Modifier.padding(innerPadding)
                     )
                 }
             }
@@ -35,10 +36,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Greeting() {
+fun Greeting(modifier: Modifier = Modifier) {
     val firstScr = ScndScr.dummyDate[0]
 
     Column(modifier = Modifier.fillMaxSize().padding(30.dp)) {
+        Image (
+            painter = painterResource(id = firstScr.imageRes),
+            contentDescription = null,
+            modifier = Modifier.padding(16.dp)
+        )
 
         Text(text = "Nama: ${firstScr.nama}")
         Text(text = "deskripsi: ${firstScr.deskripsi}")
