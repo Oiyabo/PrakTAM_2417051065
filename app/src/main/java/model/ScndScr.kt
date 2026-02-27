@@ -1,4 +1,4 @@
-package Model
+package model
 
 import com.example.praktam_2417051065.R
 

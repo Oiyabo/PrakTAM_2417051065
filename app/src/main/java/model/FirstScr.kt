@@ -1,4 +1,4 @@
-package Model
+package model
 import androidx.annotation.DrawableRes
 
 data class FirstScr (

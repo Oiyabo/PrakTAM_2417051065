@@ -1,7 +1,7 @@
 package com.example.praktam_2417051065
 
 //import Model.FirstScr
-import Model.ScndScr
+import model.ScndScr
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
