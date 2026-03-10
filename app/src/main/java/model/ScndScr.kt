@@ -3,7 +3,7 @@ package model
 import com.example.praktam_2417051065.R
 
 object ScndScr {
-    val dummyDate = listOf(
+    val dummyEvent = listOf(
         FirstScr (nama = "Kondangan", deskripsi = "Sodara nikahan", tanggal = 15, imageRes = R.drawable.bluecal),
         FirstScr (nama = "Ulang tahun", deskripsi = "Adek ulang tahun", tanggal = 3, imageRes = R.drawable.bluetimecal),
         FirstScr (nama = "Ujian", deskripsi = "Ujian datang. tidak!!!", tanggal = 25, imageRes = R.drawable.redcal),
