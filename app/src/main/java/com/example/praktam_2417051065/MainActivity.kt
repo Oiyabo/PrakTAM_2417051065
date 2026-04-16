@@ -1,15 +1,10 @@
 package com.example.praktam_2417051065
 
-import android.annotation.SuppressLint
-import android.app.DatePickerDialog
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -21,24 +16,20 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
-import com.github.skydoves.colorpicker.compose.HsvColorPicker
-import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import com.example.praktam_2417051065.ui.theme.PrakTAM_2417051065Theme
 import com.example.praktam_2417051065.ui.theme.ThemeMode
 import model.*
 import java.time.LocalDate
-import java.util.Calendar
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 
 val CurrenCluster = mutableStateListOf<EventCluster>()
 
@@ -46,9 +37,6 @@ val CurrenCluster = mutableStateListOf<EventCluster>()
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (CurrenCluster.isEmpty()) {
-            CurrenCluster.addAll(ScndScr.dataCluster)
-        }
         enableEdgeToEdge()
         setContent {
             PrakTAM_2417051065Theme(themeMode = ThemeMode.DARK) {
@@ -95,8 +83,31 @@ fun DaftarEventScreen(navCon: NavController) {
     var selectedEvent by remember { mutableStateOf<FirstScr?>(null) }
     var expanded by remember { mutableStateOf(false) }
     var selectedCluster by remember { mutableStateOf<EventCluster?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
 
-    // Gunakan CurrenCluster.size sebagai key agar UI terupdate saat ada data baru
+    LaunchedEffect(Unit) {
+        if (CurrenCluster.isEmpty()) {
+            isLoading = true
+            val clusters = FirebaseRepository.getAllClusters()
+            if (clusters.isNotEmpty()) {
+                CurrenCluster.clear()
+                CurrenCluster.addAll(clusters)
+            }
+            isLoading = false
+        }
+    }
+
+    LaunchedEffect(selectedCluster) {
+        val clusters = FirebaseRepository.getAllClusters()
+        if (clusters.isNotEmpty()) {
+            CurrenCluster.clear()
+            CurrenCluster.addAll(clusters)
+            if (selectedCluster != null) {
+                selectedCluster = CurrenCluster.find { it.namaCluster == selectedCluster?.namaCluster }
+            }
+        }
+    }
+
     val displayEvents = remember(selectedCluster, selectedDate, focusOnDate, CurrenCluster.size) {
         val base = selectedCluster?.daftarEvent ?: CurrenCluster.flatMap { it.daftarEvent }
         base.filter { e ->
@@ -118,6 +129,9 @@ fun DaftarEventScreen(navCon: NavController) {
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+            }
             Button(modifier = Modifier.height(40.dp), onClick = { navCon.navigate("addPage") }) {
                 Text("+ Cluster")
             }
@@ -131,13 +145,15 @@ fun DaftarEventScreen(navCon: NavController) {
             ViewTypeSelector(screenType) { screenType = it }
         }
         Box(Modifier.weight(1f).fillMaxSize()) {
-            if (displayEvents.isEmpty()) {
+            if (displayEvents.isEmpty() && !isLoading) {
                 Text(
                     "Kosong",
                     Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.bodyLarge
                 )
+            } else if (isLoading && displayEvents.isEmpty()) {
+                CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else when (screenType) {
                 0 -> DetailScreenBig(displayEvents) { selectedEvent = it }
                 1 -> DetailScreenMed(displayEvents) { selectedEvent = it }

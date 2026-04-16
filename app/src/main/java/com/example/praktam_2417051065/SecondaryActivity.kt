@@ -3,6 +3,7 @@ package com.example.praktam_2417051065
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,6 +30,8 @@ import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import model.*
 import java.time.LocalDate
 import java.util.Calendar
+import kotlinx.coroutines.launch
+import android.widget.Toast
 
 @Composable
 fun ShowDetailedEventInfo(e: FirstScr, onDismiss: () -> Unit) = AlertDialog(
@@ -232,6 +235,9 @@ fun AddPage(navCon: NavController) {
     val events = remember { mutableStateListOf<FirstScr>() }
     var showAddEventPopUp by remember { mutableStateOf("Close") }
     var modify by remember { mutableStateOf<FirstScr?>(null) }
+    val context = LocalContext.current
+    var isSaving by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
         TextButton(onClick = { navCon.popBackStack() }) { Text("Kembali") }
@@ -257,7 +263,6 @@ fun AddPage(navCon: NavController) {
         Spacer(modifier = Modifier.height(16.dp))
         Text("Daftar Event:", style = MaterialTheme.typography.titleMedium)
 
-        // Menampilkan event yang baru ditambahkan
         Column(modifier = Modifier.weight(1f).padding(vertical = 8.dp).verticalScroll(rememberScrollState())) {
             events.forEach { i ->
                 Card(
@@ -291,18 +296,46 @@ fun AddPage(navCon: NavController) {
 
         Button(
             onClick = {
-                CurrenCluster.add(EventCluster(
-                    namaCluster = clusterNama,
-                    deskripsiCluster = clusterDeskripsi,
-                    color = clusterColor,
-                    daftarEvent = events.toList()
-                ))
-                navCon.popBackStack()
+                Log.d("DEBUG_TAM", "Tombol Save Cluster dipencet")
+                scope.launch {
+                    if (clusterNama.isNotBlank()) {
+                        isSaving = true
+                        try {
+                            val newCluster = EventCluster(
+                                namaCluster = clusterNama,
+                                deskripsiCluster = clusterDeskripsi,
+                                color = clusterColor,
+                                daftarEvent = events.toList()
+                            )
+                            FirebaseRepository.updateCluster(newCluster)
+                            Log.d("DEBUG_TAM", "Berhasil ke Firebase")
+
+                            val existingIndex = CurrenCluster.indexOfFirst { it.namaCluster == clusterNama }
+                            if (existingIndex != -1) {
+                                CurrenCluster[existingIndex] = newCluster
+                            } else {
+                                CurrenCluster.add(newCluster)
+                            }
+
+                            Toast.makeText(context, "Cluster Berhasil Disimpan", Toast.LENGTH_SHORT).show()
+                            navCon.popBackStack()
+                        } catch (e: Exception) {
+                            Log.e("DEBUG_TAM", "Gagal simpan", e)
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                        } finally {
+                            isSaving = false
+                        }
+                    }
+                }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = clusterNama.isNotBlank()
+            enabled = clusterNama.isNotBlank() && !isSaving
         ) {
-            Text("Save Cluster")
+            if (isSaving) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+            } else {
+                Text("Save Cluster")
+            }
         }
     }
 

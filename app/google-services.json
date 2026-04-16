@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "122438979014",
+    "project_id": "lkp-tam",
+    "storage_bucket": "lkp-tam.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:122438979014:android:934cef63ac8fa8cef076c7",
+        "android_client_info": {
+          "package_name": "com.example.praktam_2417051065"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWxZirgWye7YTwDnpl4KG6sfRB2a75lhQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
