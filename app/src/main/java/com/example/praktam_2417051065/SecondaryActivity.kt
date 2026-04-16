@@ -1,6 +1,11 @@
 package com.example.praktam_2417051065
 
+import android.annotation.SuppressLint
+import android.app.DatePickerDialog
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -12,12 +17,18 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.github.skydoves.colorpicker.compose.HsvColorPicker
+import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import model.*
 import java.time.LocalDate
+import java.util.Calendar
 
 @Composable
 fun ShowDetailedEventInfo(e: FirstScr, onDismiss: () -> Unit) = AlertDialog(
@@ -26,8 +37,8 @@ fun ShowDetailedEventInfo(e: FirstScr, onDismiss: () -> Unit) = AlertDialog(
     title = { Text(e.nama, style = MaterialTheme.typography.titleLarge) },
     text = {
         Column {
-            Image(
-                painter = painterResource(e.imageRes),
+            AsyncImage(
+                model = e.image,
                 contentDescription = null,
                 modifier = Modifier.fillMaxWidth().height(180.dp).clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
@@ -46,6 +57,7 @@ fun ShowDetailedEventInfo(e: FirstScr, onDismiss: () -> Unit) = AlertDialog(
         }
     }
 )
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -82,7 +94,7 @@ fun MonthlyCalendar(selected: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (
                         if (idx in 1..days) {
                             val d = cur.withDayOfMonth(idx)
                             val isSel = d == selected
-                            val clusterColor = ScndScr.dataCluster.find { it.daftarEvent.any { e -> e.tanggal == d } }?.color?.copy(0.1f) ?: Color.Transparent
+                            val clusterColor = CurrenCluster.find { it.daftarEvent.any { e -> e.tanggal == d } }?.color?.copy(0.1f) ?: Color.Transparent
                             Box(
                                 Modifier
                                     .weight(1f)
@@ -154,7 +166,7 @@ fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Un
             text = { Text("All Clusters", style = MaterialTheme.typography.bodyMedium) },
             onClick = { onSel(null); onExp(false) }
         )
-        ScndScr.dataCluster.forEach { c ->
+        CurrenCluster.forEach { c ->
             DropdownMenuItem(
                 text = {
                     Column {
@@ -200,12 +212,218 @@ fun DetailScreenSmall(events: List<FirstScr>, onClick: (FirstScr) -> Unit) = Laz
 ) {
     items(events) { e ->
         Box(Modifier.aspectRatio(1f).clip(RoundedCornerShape(8.dp)).clickable { onClick(e) }) {
-            Image(painterResource(e.imageRes), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            AsyncImage(model = e.image, contentDescription = null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Color.Black.copy(0.4f)))
             Column(Modifier.fillMaxSize().padding(4.dp), Arrangement.SpaceBetween, Alignment.CenterHorizontally) {
                 Text(e.nama, color = Color.White, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 1)
                 Text(e.tanggal.toString(), color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             }
+        }
+    }
+}
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun AddPage(navCon: NavController) {
+    var clusterNama by remember { mutableStateOf("") }
+    var clusterDeskripsi by remember { mutableStateOf("") }
+    var clusterColor by remember { mutableStateOf(Color(0xFF2196F3)) }
+    val events = remember { mutableStateListOf<FirstScr>() }
+    var showAddEventPopUp by remember { mutableStateOf("Close") }
+    var modify by remember { mutableStateOf<FirstScr?>(null) }
+
+    Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
+        TextButton(onClick = { navCon.popBackStack() }) { Text("Kembali") }
+
+        TextField(
+            value = clusterNama,
+            onValueChange = { clusterNama = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Nama Cluster") },
+            placeholder = { Text("Isi Nama Cluster") }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        TextField(
+            value = clusterDeskripsi,
+            onValueChange = { clusterDeskripsi = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Deskripsi Cluster") },
+            placeholder = { Text("Isi Deskripsi Cluster") }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        InputColorChoice(selectedColor = clusterColor, onColorChange = { clusterColor = it })
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Daftar Event:", style = MaterialTheme.typography.titleMedium)
+
+        // Menampilkan event yang baru ditambahkan
+        Column(modifier = Modifier.weight(1f).padding(vertical = 8.dp).verticalScroll(rememberScrollState())) {
+            events.forEach { i ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Button(onClick = {
+                        modify = i
+                        showAddEventPopUp = "Modify"
+                    }) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(i.nama)
+                            Text(i.tanggal.toString())
+                        }
+                    }
+                }
+            }
+        }
+
+        TextButton(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { showAddEventPopUp = "Create" }
+        ) {
+            Text("Tambah Event")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                CurrenCluster.add(EventCluster(
+                    namaCluster = clusterNama,
+                    deskripsiCluster = clusterDeskripsi,
+                    color = clusterColor,
+                    daftarEvent = events.toList()
+                ))
+                navCon.popBackStack()
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = clusterNama.isNotBlank()
+        ) {
+            Text("Save Cluster")
+        }
+    }
+
+    if (showAddEventPopUp == "Create") {
+        AddEventPopUp(
+            onAdd = { newEvent -> events.add(newEvent) },
+            onDismiss = { showAddEventPopUp = "Close" }
+        )
+    } else if (showAddEventPopUp == "Modify") {
+        AddEventPopUp(
+            onAdd = { newEvent ->
+                val index = events.indexOf(modify)
+                if (index != -1) events[index] = newEvent
+                else events.add(newEvent)
+            },
+            mod = modify,
+            onDismiss = { showAddEventPopUp = "Close"; modify = null }
+        )
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun AddEventPopUp(onAdd: (FirstScr) -> Unit, mod: FirstScr? = null, onDismiss: () -> Unit) {
+    var nama by remember { mutableStateOf(mod?.nama ?: "") }
+    var deskripsi by remember { mutableStateOf(mod?.deskripsi ?: "") }
+    var tanggalStr by remember { mutableStateOf(mod?.tanggal?.toString() ?: LocalDate.now().toString()) }
+    var img by remember { mutableStateOf<Any?>(mod?.image ?: android.R.drawable.ic_menu_gallery) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                val date = try { LocalDate.parse(tanggalStr) } catch (e: Exception) { LocalDate.now() }
+                onAdd(FirstScr(nama, deskripsi, date, img))
+                onDismiss()
+            }) { Text(if (mod == null) "Add" else "Update") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Batal") }
+        },
+        title = { Text(if (mod == null) "Tambah Event Baru" else "Edit Event") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextField(value = nama, onValueChange = { nama = it }, label = { Text("Nama Event") }, modifier = Modifier.fillMaxWidth())
+                TextField(value = deskripsi, onValueChange = { deskripsi = it }, label = { Text("Deskripsi") }, modifier = Modifier.fillMaxWidth())
+                InputDateChoice(value = tanggalStr, onValueChange = { tanggalStr = it }, label = { Text("Tanggal") })
+                UploadImage(value = img, onValueChange = { img = it }, label = { Text("Gambar Event") })
+            }
+        }
+    )
+}
+
+@Composable
+fun InputColorChoice(selectedColor: Color, onColorChange: (Color) -> Unit) {
+    val controller = rememberColorPickerController()
+    Column {
+        Text("Pilih Warna Cluster:", style = MaterialTheme.typography.titleSmall)
+        HsvColorPicker(
+            modifier = Modifier.fillMaxWidth().height(150.dp),
+            controller = controller,
+            onColorChanged = { colorEnvelope ->
+                onColorChange(colorEnvelope.color)
+            }
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(20.dp)
+                .background(selectedColor, RoundedCornerShape(4.dp))
+        )
+    }
+}
+
+@SuppressLint("DefaultLocale")
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun InputDateChoice(value: String, onValueChange: (String) -> Unit, label: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            val formattedDate = String.format("%04d-%02d-%02d", year, month + 1, dayOfMonth)
+            onValueChange(formattedDate)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    Column {
+        label()
+        OutlinedButton(
+            onClick = { datePickerDialog.show() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(value.ifEmpty { "Pilih Tanggal" })
+        }
+    }
+}
+
+@Composable
+fun UploadImage(value: Any?, onValueChange: (Any?) -> Unit, label: @Composable () -> Unit) {
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) onValueChange(uri)
+    }
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        label()
+        AsyncImage(
+            model = value,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+            contentScale = ContentScale.Crop
+        )
+        TextButton(onClick = {
+            launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        }) {
+            Text("Pilih Gambar")
         }
     }
 }

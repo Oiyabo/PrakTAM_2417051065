@@ -1,10 +1,15 @@
 package com.example.praktam_2417051065
 
+import android.annotation.SuppressLint
+import android.app.DatePickerDialog
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -16,28 +21,39 @@ import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
+import coil.compose.AsyncImage
+import com.github.skydoves.colorpicker.compose.HsvColorPicker
+import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import com.example.praktam_2417051065.ui.theme.PrakTAM_2417051065Theme
 import com.example.praktam_2417051065.ui.theme.ThemeMode
 import model.*
 import java.time.LocalDate
+import java.util.Calendar
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+
+val CurrenCluster = mutableStateListOf<EventCluster>()
 
 @RequiresApi(Build.VERSION_CODES.O)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (CurrenCluster.isEmpty()) {
+            CurrenCluster.addAll(ScndScr.dataCluster)
+        }
         enableEdgeToEdge()
         setContent {
             PrakTAM_2417051065Theme(themeMode = ThemeMode.DARK) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    DaftarEventScreen()
-                }
+                val navController = rememberNavController()
+                AppNavigation(navController)
             }
         }
     }
@@ -45,7 +61,33 @@ class MainActivity : ComponentActivity() {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DaftarEventScreen() {
+fun AppNavigation(navController: NavHostController) {
+    NavHost(
+        navController = navController,
+        startDestination = "Home"
+    ) {
+        composable("Home") {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                DaftarEventScreen(navController)
+            }
+        }
+        composable("addPage") {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                AddPage(navController)
+            }
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DaftarEventScreen(navCon: NavController) {
     var screenType by remember { mutableIntStateOf(0) }
     var focusOnDate by remember { mutableIntStateOf(2) }
     var calCollapse by remember { mutableStateOf(true) }
@@ -54,8 +96,9 @@ fun DaftarEventScreen() {
     var expanded by remember { mutableStateOf(false) }
     var selectedCluster by remember { mutableStateOf<EventCluster?>(null) }
 
-    val displayEvents = remember(selectedCluster, selectedDate, focusOnDate) {
-        val base = selectedCluster?.daftarEvent ?: ScndScr.dataCluster.flatMap { it.daftarEvent }
+    // Gunakan CurrenCluster.size sebagai key agar UI terupdate saat ada data baru
+    val displayEvents = remember(selectedCluster, selectedDate, focusOnDate, CurrenCluster.size) {
+        val base = selectedCluster?.daftarEvent ?: CurrenCluster.flatMap { it.daftarEvent }
         base.filter { e ->
             when (focusOnDate) {
                 0 -> e.tanggal == selectedDate
@@ -67,12 +110,17 @@ fun DaftarEventScreen() {
     }
 
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(8.dp)) {
-        IconButton(onClick = { calCollapse = !calCollapse }, Modifier.height(40.dp)) {
-            Icon(
-                painterResource(android.R.drawable.ic_menu_my_calendar),
-                contentDescription = "Toggle",
-                tint = MaterialTheme.colorScheme.primary
-            )
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+            IconButton(onClick = { calCollapse = !calCollapse }, Modifier.height(40.dp)) {
+                Icon(
+                    painterResource(android.R.drawable.ic_menu_my_calendar),
+                    contentDescription = "Toggle",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            Button(modifier = Modifier.height(40.dp), onClick = { navCon.navigate("addPage") }) {
+                Text("+ Cluster")
+            }
         }
 
         if (calCollapse) CollapsedCalendar(selectedDate, { selectedDate = it }, { focusOnDate = it })
@@ -112,7 +160,7 @@ fun DetailScreenBig(events: List<FirstScr>, onClick: (FirstScr) -> Unit) = LazyC
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(painterResource(e.imageRes), null, Modifier.size(180.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
+                AsyncImage(model = e.image, contentDescription = null, Modifier.size(180.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop)
                 Spacer(Modifier.height(12.dp))
                 Text(e.nama, style = MaterialTheme.typography.titleLarge)
                 Text(e.deskripsi, style = MaterialTheme.typography.bodyMedium)
@@ -147,7 +195,7 @@ fun DetailScreenMed(events: List<FirstScr>, onClick: (FirstScr) -> Unit) = LazyC
                 .padding(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(painterResource(e.imageRes), null, Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+            AsyncImage(model = e.image, contentDescription = null, Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
             Column(Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(e.nama, style = MaterialTheme.typography.titleMedium)
                 Text(e.deskripsi, maxLines = 1, style = MaterialTheme.typography.bodyMedium)
@@ -172,7 +220,7 @@ fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: 
             items(cur.lengthOfMonth()) { i ->
                 val date = cur.withDayOfMonth(i + 1)
                 val isSel = date == selDate
-                val eventCluster = ScndScr.dataCluster.find { cluster ->
+                val eventCluster = CurrenCluster.find { cluster ->
                     cluster.daftarEvent.any { event -> event.tanggal == date }
                 }
                 val eventHighlightColor = eventCluster?.color?.copy(alpha = 0.2f) ?: Color.Transparent
@@ -198,4 +246,6 @@ fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: 
 @RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true)
 @Composable
-fun Preview() = PrakTAM_2417051065Theme(themeMode = ThemeMode.GRAY) { DaftarEventScreen() }
+fun Preview() = PrakTAM_2417051065Theme(themeMode = ThemeMode.GRAY) {
+    DaftarEventScreen(rememberNavController())
+}
