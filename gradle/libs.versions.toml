@@ -9,10 +9,10 @@ lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.9.3"
 composeBom = "2024.11.00"
 navigationCompose = "2.8.4"
-coil = "2.7.0"
 colorpicker-compose = "1.1.2"
 coroutines = "1.9.0"
 lifecycleViewmodelCompose = "2.8.7"
+coil = "2.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -31,8 +31,8 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 colorpicker-compose = { group = "com.github.skydoves", name = "colorpicker-compose", version.ref = "colorpicker-compose" }
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

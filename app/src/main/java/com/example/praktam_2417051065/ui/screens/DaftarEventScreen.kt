@@ -24,28 +24,18 @@ import java.time.LocalDate
 @Composable
 fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
     var isLoading by remember { mutableStateOf(true) }
+    var isError by remember { mutableStateOf(false) }
+    var retryTrigger by remember { mutableIntStateOf(0) }
     val tag = "DaftarEventScreen"
 
-    LaunchedEffect(Unit) {
-        if (viewModel.currentCluster.isEmpty()) {
-            try {
-                Log.d(tag, "Memulai fetching data dari API...")
-                val response = RetrofitClient.instance.getDataCluster()
-                Log.d(tag, "Data berhasil diambil. Jumlah cluster: ${response.dataCluster.size}")
-                
-                response.dataCluster.forEach { networkCluster ->
-                    Log.d(tag, "Mapping cluster: ${networkCluster.namaCluster} dengan ${networkCluster.daftarEvent.size} event")
-                    viewModel.saveCluster(networkCluster.toDomain())
-                }
-            } catch (e: Exception) {
-                Log.e(tag, "Terjadi kesalahan saat fetching data: ${e.message}", e)
-            } finally {
-                isLoading = false
-            }
-        } else {
-            Log.d(tag, "Data sudah ada di ViewModel, melewati fetching.")
-            isLoading = false
-        }
+    LaunchedEffect(retryTrigger) {if (viewModel.currentCluster.isNotEmpty()) {  isLoading = false; return@LaunchedEffect  }
+        isLoading = true
+        isError = runCatching {
+            RetrofitClient.instance.getDataCluster().dataCluster?.forEach {
+                viewModel.saveCluster(it.toDomain())
+            } ?: error("Empty data")
+        }.onFailure { Log.e(tag, "Fetch error: ${it.message}") }.isFailure
+        isLoading = false
     }
 
     if (isLoading) {
@@ -54,6 +44,26 @@ fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
                 CircularProgressIndicator()
                 Spacer(Modifier.height(8.dp))
                 Text("Memuat data...")
+            }
+        }
+        return
+    }
+
+    if (isError) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    painter = painterResource(android.R.drawable.stat_notify_error),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("Gagal memuat data", color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = { retryTrigger++ }) {
+                    Text("Coba Lagi")
+                }
             }
         }
         return
@@ -126,6 +136,6 @@ fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
     }
 
     selectedEvent.value?.let { event ->
-        ShowDetailedEventInfo(event) { selectedEvent.value = null }
+        ShowDetailedEventInfo(event, placeholderImage) { selectedEvent.value = null }
     }
 }

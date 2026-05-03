@@ -136,14 +136,14 @@ fun AddEventPopUp(onAdd: (EventData) -> Unit, mod: EventData? = null, onDismiss:
     var nama by remember { mutableStateOf(mod?.nama ?: "") }
     var deskripsi by remember { mutableStateOf(mod?.deskripsi ?: "") }
     var tanggalStr by remember { mutableStateOf(mod?.tanggal?.toString() ?: LocalDate.now().toString()) }
-    var img by remember { mutableStateOf<Any?>(mod?.image ?: android.R.drawable.ic_menu_gallery) }
+    var img by remember { mutableStateOf<Any?>(mod?.imageUrl ?: android.R.drawable.ic_menu_gallery) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
                 val date = try { LocalDate.parse(tanggalStr) } catch (_: Exception) { LocalDate.now() }
-                onAdd(EventData(nama, deskripsi, date, img))
+                onAdd(EventData(nama, deskripsi, date, img as String))
             }) { Text(if (mod == null) "Add" else "Update") }
         },
         dismissButton = {

@@ -1,9 +1,11 @@
 package com.example.praktam_2417051065.model
 
+import android.annotation.SuppressLint
 import android.content.Context
 import com.example.praktam_2417051065.R
 
 object DataSource {
+    @SuppressLint("DiscouragedApi")
     fun getResourceId(context: Context, imageName: String?): Int {
         if (imageName.isNullOrBlank()) return R.drawable.noimg
 
