@@ -3,7 +3,6 @@ package com.example.praktam_2417051065
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
 import android.os.Build
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
@@ -30,7 +28,6 @@ import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import model.*
 import java.time.LocalDate
 import java.util.Calendar
-import kotlinx.coroutines.launch
 import android.widget.Toast
 
 @Composable
@@ -64,7 +61,7 @@ fun ShowDetailedEventInfo(e: FirstScr, onDismiss: () -> Unit) = AlertDialog(
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MonthlyCalendar(selected: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun MonthlyCalendar(selected: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (Int) -> Unit, viewModel: MainViewModel, modifier: Modifier = Modifier) {
     var cur by remember { mutableStateOf(selected.withDayOfMonth(1)) }
     Row(modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         CalendarControl(cur.year.toString(), { cur = cur.minusYears(1) }, { cur = cur.plusYears(1) }, { onFocus(2); onDate(cur) })
@@ -97,7 +94,7 @@ fun MonthlyCalendar(selected: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (
                         if (idx in 1..days) {
                             val d = cur.withDayOfMonth(idx)
                             val isSel = d == selected
-                            val clusterColor = CurrenCluster.find { it.daftarEvent.any { e -> e.tanggal == d } }?.color?.copy(0.1f) ?: Color.Transparent
+                            val clusterColor = viewModel.currentCluster.find { it.daftarEvent.any { e -> e.tanggal == d } }?.color?.copy(0.1f) ?: Color.Transparent
                             Box(
                                 Modifier
                                     .weight(1f)
@@ -147,7 +144,7 @@ fun CalendarControl(label: String, onUp: () -> Unit, onDown: () -> Unit, action:
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Unit, onSel: (EventCluster?) -> Unit, modifier: Modifier) = Box(modifier.fillMaxHeight()) {
+fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Unit, onSel: (EventCluster?) -> Unit, viewModel: MainViewModel, modifier: Modifier) = Box(modifier.fillMaxHeight()) {
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -169,7 +166,7 @@ fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Un
             text = { Text("All Clusters", style = MaterialTheme.typography.bodyMedium) },
             onClick = { onSel(null); onExp(false) }
         )
-        CurrenCluster.forEach { c ->
+        viewModel.currentCluster.forEach { c ->
             DropdownMenuItem(
                 text = {
                     Column {
@@ -228,16 +225,14 @@ fun DetailScreenSmall(events: List<FirstScr>, onClick: (FirstScr) -> Unit) = Laz
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AddPage(navCon: NavController) {
+fun AddPage(navCon: NavController, viewModel: MainViewModel) {
     var clusterNama by remember { mutableStateOf("") }
     var clusterDeskripsi by remember { mutableStateOf("") }
     var clusterColor by remember { mutableStateOf(Color(0xFF2196F3)) }
     val events = remember { mutableStateListOf<FirstScr>() }
-    var showAddEventPopUp by remember { mutableStateOf("Close") }
-    var modify by remember { mutableStateOf<FirstScr?>(null) }
+    val showPopup = remember { mutableStateOf(false) }
+    val modify = remember { mutableStateOf<FirstScr?>(null) }
     val context = LocalContext.current
-    var isSaving by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
         TextButton(onClick = { navCon.popBackStack() }) { Text("Kembali") }
@@ -270,8 +265,8 @@ fun AddPage(navCon: NavController) {
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Button(onClick = {
-                        modify = i
-                        showAddEventPopUp = "Modify"
+                        modify.value = i
+                        showPopup.value = true
                     }) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(12.dp),
@@ -287,7 +282,10 @@ fun AddPage(navCon: NavController) {
 
         TextButton(
             modifier = Modifier.fillMaxWidth(),
-            onClick = { showAddEventPopUp = "Create" }
+            onClick = {
+                modify.value = null
+                showPopup.value = true
+            }
         ) {
             Text("Tambah Event")
         }
@@ -296,63 +294,40 @@ fun AddPage(navCon: NavController) {
 
         Button(
             onClick = {
-                Log.d("DEBUG_TAM", "Tombol Save Cluster dipencet")
-                scope.launch {
-                    if (clusterNama.isNotBlank()) {
-                        isSaving = true
-                        try {
-                            val newCluster = EventCluster(
-                                namaCluster = clusterNama,
-                                deskripsiCluster = clusterDeskripsi,
-                                color = clusterColor,
-                                daftarEvent = events.toList()
-                            )
-                            FirebaseRepository.updateCluster(newCluster)
-                            Log.d("DEBUG_TAM", "Berhasil ke Firebase")
-
-                            val existingIndex = CurrenCluster.indexOfFirst { it.namaCluster == clusterNama }
-                            if (existingIndex != -1) {
-                                CurrenCluster[existingIndex] = newCluster
-                            } else {
-                                CurrenCluster.add(newCluster)
-                            }
-
-                            Toast.makeText(context, "Cluster Berhasil Disimpan", Toast.LENGTH_SHORT).show()
-                            navCon.popBackStack()
-                        } catch (e: Exception) {
-                            Log.e("DEBUG_TAM", "Gagal simpan", e)
-                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_LONG).show()
-                        } finally {
-                            isSaving = false
-                        }
-                    }
+                if (clusterNama.isNotBlank()) {
+                    val newCluster = EventCluster(
+                        namaCluster = clusterNama,
+                        deskripsiCluster = clusterDeskripsi,
+                        color = clusterColor,
+                        daftarEvent = events.toList()
+                    )
+                    viewModel.saveCluster(newCluster)
+                    Toast.makeText(context, "Cluster Berhasil Disimpan", Toast.LENGTH_SHORT).show()
+                    navCon.popBackStack()
                 }
             },
             modifier = Modifier.fillMaxWidth(),
-            enabled = clusterNama.isNotBlank() && !isSaving
+            enabled = clusterNama.isNotBlank()
         ) {
-            if (isSaving) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
-            } else {
-                Text("Save Cluster")
-            }
+            Text("Save Cluster")
         }
     }
 
-    if (showAddEventPopUp == "Create") {
-        AddEventPopUp(
-            onAdd = { newEvent -> events.add(newEvent) },
-            onDismiss = { showAddEventPopUp = "Close" }
-        )
-    } else if (showAddEventPopUp == "Modify") {
+    if (showPopup.value) {
         AddEventPopUp(
             onAdd = { newEvent ->
-                val index = events.indexOf(modify)
+                val m = modify.value
+                val index = if (m != null) events.indexOf(m) else -1
                 if (index != -1) events[index] = newEvent
                 else events.add(newEvent)
+                showPopup.value = false
+                modify.value = null
             },
-            mod = modify,
-            onDismiss = { showAddEventPopUp = "Close"; modify = null }
+            mod = modify.value,
+            onDismiss = {
+                showPopup.value = false
+                modify.value = null
+            }
         )
     }
 }
@@ -369,9 +344,8 @@ fun AddEventPopUp(onAdd: (FirstScr) -> Unit, mod: FirstScr? = null, onDismiss: (
         onDismissRequest = onDismiss,
         confirmButton = {
             TextButton(onClick = {
-                val date = try { LocalDate.parse(tanggalStr) } catch (e: Exception) { LocalDate.now() }
+                val date = try { LocalDate.parse(tanggalStr) } catch (_: Exception) { LocalDate.now() }
                 onAdd(FirstScr(nama, deskripsi, date, img))
-                onDismiss()
             }) { Text(if (mod == null) "Add" else "Update") }
         },
         dismissButton = {

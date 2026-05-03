@@ -20,6 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -31,8 +32,6 @@ import com.example.praktam_2417051065.ui.theme.ThemeMode
 import model.*
 import java.time.LocalDate
 
-val CurrenCluster = mutableStateListOf<EventCluster>()
-
 @RequiresApi(Build.VERSION_CODES.O)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +40,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             PrakTAM_2417051065Theme(themeMode = ThemeMode.DARK) {
                 val navController = rememberNavController()
-                AppNavigation(navController)
+                val mainViewModel: MainViewModel = viewModel()
+                AppNavigation(navController, mainViewModel)
             }
         }
     }
@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AppNavigation(navController: NavHostController) {
+fun AppNavigation(navController: NavHostController, viewModel: MainViewModel) {
     NavHost(
         navController = navController,
         startDestination = "Home"
@@ -59,7 +59,7 @@ fun AppNavigation(navController: NavHostController) {
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
-                DaftarEventScreen(navController)
+                DaftarEventScreen(navController, viewModel)
             }
         }
         composable("addPage") {
@@ -67,7 +67,7 @@ fun AppNavigation(navController: NavHostController) {
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
-                AddPage(navController)
+                AddPage(navController, viewModel)
             }
         }
     }
@@ -75,41 +75,17 @@ fun AppNavigation(navController: NavHostController) {
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DaftarEventScreen(navCon: NavController) {
+fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
     var screenType by remember { mutableIntStateOf(0) }
     var focusOnDate by remember { mutableIntStateOf(2) }
     var calCollapse by remember { mutableStateOf(true) }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var selectedEvent by remember { mutableStateOf<FirstScr?>(null) }
+    val selectedEvent = remember { mutableStateOf<FirstScr?>(null) }
     var expanded by remember { mutableStateOf(false) }
     var selectedCluster by remember { mutableStateOf<EventCluster?>(null) }
-    var isLoading by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        if (CurrenCluster.isEmpty()) {
-            isLoading = true
-            val clusters = FirebaseRepository.getAllClusters()
-            if (clusters.isNotEmpty()) {
-                CurrenCluster.clear()
-                CurrenCluster.addAll(clusters)
-            }
-            isLoading = false
-        }
-    }
-
-    LaunchedEffect(selectedCluster) {
-        val clusters = FirebaseRepository.getAllClusters()
-        if (clusters.isNotEmpty()) {
-            CurrenCluster.clear()
-            CurrenCluster.addAll(clusters)
-            if (selectedCluster != null) {
-                selectedCluster = CurrenCluster.find { it.namaCluster == selectedCluster?.namaCluster }
-            }
-        }
-    }
-
-    val displayEvents = remember(selectedCluster, selectedDate, focusOnDate, CurrenCluster.size) {
-        val base = selectedCluster?.daftarEvent ?: CurrenCluster.flatMap { it.daftarEvent }
+    val displayEvents = remember(selectedCluster, selectedDate, focusOnDate, viewModel.currentCluster.size) {
+        val base = selectedCluster?.daftarEvent ?: viewModel.currentCluster.flatMap { it.daftarEvent }
         base.filter { e ->
             when (focusOnDate) {
                 0 -> e.tanggal == selectedDate
@@ -129,39 +105,34 @@ fun DaftarEventScreen(navCon: NavController) {
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
-            if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-            }
             Button(modifier = Modifier.height(40.dp), onClick = { navCon.navigate("addPage") }) {
                 Text("+ Cluster")
             }
         }
 
-        if (calCollapse) CollapsedCalendar(selectedDate, { selectedDate = it }, { focusOnDate = it })
-        else MonthlyCalendar(selectedDate, { selectedDate = it }, { focusOnDate = it }, Modifier.padding(bottom = 8.dp))
+        if (calCollapse) CollapsedCalendar(selectedDate, { selectedDate = it }, { focusOnDate = it }, viewModel)
+        else MonthlyCalendar(selectedDate, { selectedDate = it }, { focusOnDate = it }, viewModel, Modifier.padding(bottom = 8.dp))
 
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).height(40.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
-            ClusterSelector(selectedCluster, expanded, { expanded = it }, { selectedCluster = it }, Modifier.weight(1f))
+            ClusterSelector(selectedCluster, expanded, { expanded = it }, { selectedCluster = it }, viewModel, Modifier.weight(1f))
             ViewTypeSelector(screenType) { screenType = it }
         }
         Box(Modifier.weight(1f).fillMaxSize()) {
-            if (displayEvents.isEmpty() && !isLoading) {
+            if (displayEvents.isEmpty()) {
                 Text(
                     "Kosong",
                     Modifier.align(Alignment.Center),
                     color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.bodyLarge
                 )
-            } else if (isLoading && displayEvents.isEmpty()) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else when (screenType) {
-                0 -> DetailScreenBig(displayEvents) { selectedEvent = it }
-                1 -> DetailScreenMed(displayEvents) { selectedEvent = it }
-                2 -> DetailScreenSmall(displayEvents) { selectedEvent = it }
+                0 -> DetailScreenBig(displayEvents) { selectedEvent.value = it }
+                1 -> DetailScreenMed(displayEvents) { selectedEvent.value = it }
+                2 -> DetailScreenSmall(displayEvents) { selectedEvent.value = it }
             }
         }
     }
-    selectedEvent?.let { ShowDetailedEventInfo(it) { selectedEvent = null } }
+    selectedEvent.value?.let { ShowDetailedEventInfo(it) { selectedEvent.value = null } }
 }
 
 @Composable
@@ -223,7 +194,7 @@ fun DetailScreenMed(events: List<FirstScr>, onClick: (FirstScr) -> Unit) = LazyC
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (Int) -> Unit) {
+fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (Int) -> Unit, viewModel: MainViewModel) {
     var cur by remember { mutableStateOf(selDate.withDayOfMonth(1)) }
 
     Column(Modifier.padding(8.dp)) {
@@ -236,7 +207,7 @@ fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: 
             items(cur.lengthOfMonth()) { i ->
                 val date = cur.withDayOfMonth(i + 1)
                 val isSel = date == selDate
-                val eventCluster = CurrenCluster.find { cluster ->
+                val eventCluster = viewModel.currentCluster.find { cluster ->
                     cluster.daftarEvent.any { event -> event.tanggal == date }
                 }
                 val eventHighlightColor = eventCluster?.color?.copy(alpha = 0.2f) ?: Color.Transparent
@@ -263,5 +234,5 @@ fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: 
 @Preview(showBackground = true)
 @Composable
 fun Preview() = PrakTAM_2417051065Theme(themeMode = ThemeMode.GRAY) {
-    DaftarEventScreen(rememberNavController())
+    DaftarEventScreen(rememberNavController(), viewModel())
 }
