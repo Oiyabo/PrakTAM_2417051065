@@ -4,7 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
-import model.EventCluster
+import com.example.praktam_2417051065.model.EventCluster
 
 class MainViewModel : ViewModel() {
     private val _currentCluster = mutableStateListOf<EventCluster>()
