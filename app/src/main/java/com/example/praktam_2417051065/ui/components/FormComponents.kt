@@ -24,15 +24,16 @@ import androidx.compose.ui.text.font.FontWeight
 //import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-import com.example.praktam_2417051065.MainViewModel
-import com.example.praktam_2417051065.model.EventCluster
+//import com.example.praktam_2417051065.MainViewModel
+import com.example.praktam_2417051065.Repository
+import com.example.praktam_2417051065.data.model.EventCluster
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import java.util.Calendar
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Unit, onSel: (EventCluster?) -> Unit, viewModel: MainViewModel, modifier: Modifier) = Box(modifier.fillMaxHeight()) {
+fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Unit, onSel: (EventCluster?) -> Unit, repo: Repository, modifier: Modifier) = Box(modifier.fillMaxHeight()) {
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -54,7 +55,7 @@ fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Un
             text = { Text("All Clusters", style = MaterialTheme.typography.bodyMedium) },
             onClick = { onSel(null); onExp(false) }
         )
-        viewModel.currentCluster.forEach { c ->
+        repo.currentCluster.forEach { c ->
             DropdownMenuItem(
                 text = {
                     Column {

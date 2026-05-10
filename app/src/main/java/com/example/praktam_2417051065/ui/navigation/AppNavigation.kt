@@ -10,13 +10,14 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.praktam_2417051065.MainViewModel
+//import com.example.praktam_2417051065.MainViewModel
+import com.example.praktam_2417051065.Repository
 import com.example.praktam_2417051065.ui.screens.AddPage
 import com.example.praktam_2417051065.ui.screens.DaftarEventScreen
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AppNavigation(navController: NavHostController, viewModel: MainViewModel) {
+fun AppNavigation(navController: NavHostController, repo: Repository) {
     NavHost(
         navController = navController,
         startDestination = "Home"
@@ -26,7 +27,7 @@ fun AppNavigation(navController: NavHostController, viewModel: MainViewModel) {
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
-                DaftarEventScreen(navController, viewModel)
+                DaftarEventScreen(navController, repo)
             }
         }
         composable("addPage") {
@@ -34,7 +35,7 @@ fun AppNavigation(navController: NavHostController, viewModel: MainViewModel) {
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background
             ) {
-                AddPage(navController, viewModel)
+                AddPage(navController, repo)
             }
         }
     }

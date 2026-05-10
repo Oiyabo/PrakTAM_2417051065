@@ -27,8 +27,8 @@
 //import java.time.LocalDate
 //import java.util.Calendar
 //import android.widget.Toast
-//import com.example.praktam_2417051065.model.EventCluster
-//import com.example.praktam_2417051065.model.EventData
+//import com.example.praktam_2417051065.data.model.EventCluster
+//import com.example.praktam_2417051065.data.model.EventData
 //
 //@Composable
 //fun ShowDetailedEventInfo(e: EventData, onDismiss: () -> Unit) = AlertDialog(

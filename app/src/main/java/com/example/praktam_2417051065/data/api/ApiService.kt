@@ -1,6 +1,6 @@
-package com.example.praktam_2417051065.network
+package com.example.praktam_2417051065.data.api
 
-import com.example.praktam_2417051065.model.DataClusterResponse
+import com.example.praktam_2417051065.data.model.DataClusterResponse
 import retrofit2.http.GET
 
 interface ApiService {

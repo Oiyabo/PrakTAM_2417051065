@@ -1,4 +1,4 @@
-package com.example.praktam_2417051065.model
+package com.example.praktam_2417051065.data.model
 
 import android.annotation.SuppressLint
 import android.content.Context

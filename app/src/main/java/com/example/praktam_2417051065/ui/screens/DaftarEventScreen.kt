@@ -12,27 +12,31 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.praktam_2417051065.MainViewModel
-import com.example.praktam_2417051065.model.DataSource
-import com.example.praktam_2417051065.model.EventCluster
-import com.example.praktam_2417051065.model.EventData
-import com.example.praktam_2417051065.network.RetrofitClient
+//import com.example.praktam_2417051065.MainViewModel
+import com.example.praktam_2417051065.Repository
+import com.example.praktam_2417051065.data.model.DataSource
+import com.example.praktam_2417051065.data.model.EventCluster
+import com.example.praktam_2417051065.data.model.EventData
+import com.example.praktam_2417051065.data.api.RetrofitClient
 import com.example.praktam_2417051065.ui.components.*
 import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
+fun DaftarEventScreen(navCon: NavController, repo: Repository) {
     var isLoading by remember { mutableStateOf(true) }
     var isError by remember { mutableStateOf(false) }
     var retryTrigger by remember { mutableIntStateOf(0) }
     val tag = "DaftarEventScreen"
 
-    LaunchedEffect(retryTrigger) {if (viewModel.currentCluster.isNotEmpty()) {  isLoading = false; return@LaunchedEffect  }
+    LaunchedEffect(retryTrigger) {
+        if (repo.currentCluster.isNotEmpty()) {
+            isLoading = false; return@LaunchedEffect
+        }
         isLoading = true
         isError = runCatching {
             RetrofitClient.instance.getDataCluster().dataCluster?.forEach {
-                viewModel.saveCluster(it.toDomain())
+                repo.saveCluster(it.toDomain())
             } ?: error("Empty data")
         }.onFailure { Log.e(tag, "Fetch error: ${it.message}") }.isFailure
         isLoading = false
@@ -81,8 +85,8 @@ fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
     val context = LocalContext.current
     val placeholderImage = DataSource.getResourceId(context, "noimg")
 
-    val displayEvents = remember(selectedCluster, selectedDate, focusOnDate, viewModel.currentCluster.size) {
-        val base = selectedCluster?.daftarEvent ?: viewModel.currentCluster.flatMap { it.daftarEvent }
+    val displayEvents = remember(selectedCluster, selectedDate, focusOnDate, repo.currentCluster.size) {
+        val base = selectedCluster?.daftarEvent ?: repo.currentCluster.flatMap { it.daftarEvent }
         val filtered = base.filter { e ->
             when (focusOnDate) {
                 0 -> e.tanggal == selectedDate
@@ -109,13 +113,13 @@ fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
         }
 
         if (calCollapse) {
-            CollapsedCalendar(selectedDate, { selectedDate = it }, { focusOnDate = it }, viewModel)
+            CollapsedCalendar(selectedDate, { selectedDate = it }, { focusOnDate = it }, repo)
         } else {
-            MonthlyCalendar(selectedDate, { selectedDate = it }, { focusOnDate = it }, viewModel, Modifier.padding(bottom = 8.dp))
+            MonthlyCalendar(selectedDate, { selectedDate = it }, { focusOnDate = it }, repo, Modifier.padding(bottom = 8.dp))
         }
 
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).height(40.dp), Arrangement.spacedBy(8.dp), Alignment.CenterVertically) {
-            ClusterSelector(selectedCluster, expanded, { expanded = it }, { selectedCluster = it }, viewModel, Modifier.weight(1f))
+            ClusterSelector(selectedCluster, expanded, { expanded = it }, { selectedCluster = it }, repo, Modifier.weight(1f))
             ViewTypeSelector(screenType) { screenType = it }
         }
 

@@ -13,9 +13,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.praktam_2417051065.MainViewModel
-import com.example.praktam_2417051065.model.EventCluster
-import com.example.praktam_2417051065.model.EventData
+//import com.example.praktam_2417051065.MainViewModel
+import com.example.praktam_2417051065.Repository
+import com.example.praktam_2417051065.data.model.EventCluster
+import com.example.praktam_2417051065.data.model.EventData
 import com.example.praktam_2417051065.ui.components.InputColorChoice
 import com.example.praktam_2417051065.ui.components.InputDateChoice
 import com.example.praktam_2417051065.ui.components.UploadImage
@@ -23,7 +24,7 @@ import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun AddPage(navCon: NavController, viewModel: MainViewModel) {
+fun AddPage(navCon: NavController, repo: Repository) {
     var clusterNama by remember { mutableStateOf("") }
     var clusterDeskripsi by remember { mutableStateOf("") }
     var clusterColor by remember { mutableStateOf(Color(0xFF2196F3)) }
@@ -99,7 +100,7 @@ fun AddPage(navCon: NavController, viewModel: MainViewModel) {
                         color = clusterColor,
                         daftarEvent = events.toList()
                     )
-                    viewModel.saveCluster(newCluster)
+                    repo.saveCluster(newCluster)
                     Toast.makeText(context, "Cluster Berhasil Disimpan", Toast.LENGTH_SHORT).show()
                     navCon.popBackStack()
                 }

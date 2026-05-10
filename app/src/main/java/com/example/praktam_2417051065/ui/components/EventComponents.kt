@@ -23,8 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
-//import com.example.praktam_2417051065.model.DataSource
-import com.example.praktam_2417051065.model.EventData
+//import com.example.praktam_2417051065.data.model.DataSource
+import com.example.praktam_2417051065.data.model.EventData
 
 import coil.compose.AsyncImage
 
