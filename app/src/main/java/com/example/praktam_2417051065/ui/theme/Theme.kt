@@ -7,48 +7,57 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val LightColorScheme = lightColorScheme(
-    primary = OrangePrimary,
-    secondary = OrangeSecondary,
-    background = CreamBackground,
-    surface = CardSurface,
-    onPrimary = OnPrimaryText,
-    onSurface = Color.Black,
-    onBackground = Color.Black
+    primary = WarmOrangePrimary,
+    onPrimary = WarmOrangeOnPrimary,
+    primaryContainer = WarmOrangePrimaryContainer,
+    onPrimaryContainer = WarmOrangeOnPrimaryContainer,
+    secondary = WarmOrangeSecondary,
+    onSecondary = WarmOrangeOnSecondary,
+    secondaryContainer = WarmOrangeSecondaryContainer,
+    onSecondaryContainer = WarmOrangeOnSecondaryContainer,
+    tertiary = WarmOrangeTertiary,
+    onTertiary = WarmOrangeOnTertiary,
+    tertiaryContainer = WarmOrangeTertiaryContainer,
+    onTertiaryContainer = WarmOrangeOnTertiaryContainer,
+    background = WarmCreamBackground,
+    surface = WarmCreamSurface,
+    onSurface = WarmOnSurface,
+    onBackground = WarmOnSurface,
+    onSurfaceVariant = WarmOnSurfaceVariant,
+    surfaceVariant = Color(0xFFF5EFEA) // Slightly darker than background for cards
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = OrangeSecondary,
-    secondary = OrangePrimary,
-    background = Color(0xFF121212),
-    surface = Color(0xFF1E1E1E),
-    onPrimary = Color.Black,
-    onSurface = Color.White,
-    onBackground = Color.White
-)
-
-private val GrayColorScheme = lightColorScheme(
-    primary = GrayPrimary,
-    secondary = GraySecondary,
-    background = GrayBackground,
-    surface = GraySurface,
-    onPrimary = Color.White,
-    onSurface = Color.Black,
-    onBackground = Color.Black
+    primary = DarkWarmPrimary,
+    onPrimary = DarkWarmOnPrimary,
+    primaryContainer = DarkWarmPrimaryContainer,
+    onPrimaryContainer = DarkWarmOnPrimaryContainer,
+    secondary = DarkWarmSecondary,
+    onSecondary = DarkWarmOnSecondary,
+    secondaryContainer = DarkWarmSecondaryContainer,
+    onSecondaryContainer = DarkWarmOnSecondaryContainer,
+    tertiary = DarkWarmTertiary,
+    onTertiary = DarkWarmOnTertiary,
+    background = DarkWarmBackground,
+    surface = DarkWarmSurface,
+    onSurface = DarkWarmOnSurface,
+    onBackground = DarkWarmOnSurface,
+    onSurfaceVariant = DarkWarmOnSurfaceVariant,
+    surfaceVariant = Color(0xFF33302E)
 )
 
 enum class ThemeMode {
-    LIGHT, DARK, GRAY
+    LIGHT, DARK
 }
 
 @Composable
 fun PrakTAM_2417051065Theme(
-    themeMode: ThemeMode = ThemeMode.GRAY, // Default as requested
+    themeMode: ThemeMode = ThemeMode.LIGHT,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when (themeMode) {
         ThemeMode.LIGHT -> LightColorScheme
         ThemeMode.DARK -> DarkColorScheme
-        ThemeMode.GRAY -> GrayColorScheme
     }
 
     MaterialTheme(

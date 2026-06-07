@@ -14,7 +14,8 @@ data class EventCluster(
     val namaCluster: String,
     val deskripsiCluster: String,
     val daftarEvent: List<EventData>,
-    val color: Color
+    val color: Color,
+    val owner: String? = null
 )
 
 /**
@@ -31,7 +32,8 @@ data class NetworkEventCluster(
     @SerializedName("namaCluster") val namaCluster: String?,
     @SerializedName("deskripsiCluster") val deskripsiCluster: String?,
     @SerializedName("daftarEvent") val daftarEvent: List<NetworkEventData>?,
-    @SerializedName("color") val colorString: String?
+    @SerializedName("color") val colorString: String?,
+    @SerializedName("owner") val owner: String?
 ) {
     @RequiresApi(Build.VERSION_CODES.O)
     fun toDomain(): EventCluster = EventCluster(
@@ -42,6 +44,7 @@ data class NetworkEventCluster(
             Color(colorString?.toColorInt() ?: Color.Gray.toArgb())
         } catch (_: Exception) {
             Color.Gray
-        }
+        },
+        owner = owner
     )
 }

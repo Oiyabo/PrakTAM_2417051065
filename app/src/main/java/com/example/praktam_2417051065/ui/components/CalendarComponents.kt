@@ -19,13 +19,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-//import com.example.praktam_2417051065.MainViewModel
-import com.example.praktam_2417051065.Repository
+import com.example.praktam_2417051065.MainViewModel
 import java.time.LocalDate
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun MonthlyCalendar(selected: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (Int) -> Unit, repo: Repository, modifier: Modifier = Modifier) {
+fun MonthlyCalendar(selected: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (Int) -> Unit, viewModel: MainViewModel, modifier: Modifier = Modifier) {
     var cur by remember { mutableStateOf(selected.withDayOfMonth(1)) }
     Row(modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         CalendarControl(cur.year.toString(), { cur = cur.minusYears(1) }, { cur = cur.plusYears(1) }, { onFocus(2); onDate(cur) })
@@ -35,7 +34,7 @@ fun MonthlyCalendar(selected: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (
                 .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
                 .padding(2.dp)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
         ) {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
                 listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat").forEach {
@@ -58,7 +57,7 @@ fun MonthlyCalendar(selected: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (
                         if (idx in 1..days) {
                             val d = cur.withDayOfMonth(idx)
                             val isSel = d == selected
-                            val clusterColor = repo.currentCluster.find { it.daftarEvent.any { e -> e.tanggal == d } }?.color?.copy(0.1f) ?: Color.Transparent
+                            val clusterColor = viewModel.currentCluster.find { it.daftarEvent.any { e -> e.tanggal == d } }?.color?.copy(0.2f) ?: Color.Transparent
                             Box(
                                 Modifier
                                     .weight(1f)
@@ -96,7 +95,7 @@ fun CalendarControl(label: String, onUp: () -> Unit, onDown: () -> Unit, action:
     Modifier
         .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
         .fillMaxHeight()
-        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+        .border(1.dp, MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
         .clickable { action() },
     horizontalAlignment = Alignment.CenterHorizontally,
     verticalArrangement = Arrangement.SpaceAround
@@ -108,7 +107,7 @@ fun CalendarControl(label: String, onUp: () -> Unit, onDown: () -> Unit, action:
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (Int) -> Unit, repo: Repository) {
+fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: (Int) -> Unit, viewModel: MainViewModel) {
     var cur by remember { mutableStateOf(selDate.withDayOfMonth(1)) }
 
     Column(Modifier.padding(8.dp)) {
@@ -126,7 +125,7 @@ fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: 
             items(cur.lengthOfMonth()) { i ->
                 val date = cur.withDayOfMonth(i + 1)
                 val isSel = date == selDate
-                val eventCluster = repo.currentCluster.find { cluster ->
+                val eventCluster = viewModel.currentCluster.find { cluster ->
                     cluster.daftarEvent.any { event -> event.tanggal == date }
                 }
                 val highlightColor = eventCluster?.color?.copy(alpha = 0.2f) ?: Color.Transparent
@@ -136,7 +135,7 @@ fun CollapsedCalendar(selDate: LocalDate, onDate: (LocalDate) -> Unit, onFocus: 
                         .size(40.dp)
                         .clip(RoundedCornerShape(8.dp))
                         .background(if (isSel) MaterialTheme.colorScheme.primary else highlightColor)
-                        .border(1.dp, if (isSel) Color.Transparent else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                        .border(1.dp, if (isSel) Color.Transparent else MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                         .clickable { onDate(date); onFocus(0) },
                     Alignment.Center
                 ) {

@@ -10,7 +10,9 @@ data class EventData(
     val nama: String,
     val deskripsi: String,
     val tanggal: LocalDate,
-    val imageUrl: String
+    val imageUrl: String,
+    val alarmEnabled: Boolean = false,
+    val alarmTime: String? = null
 )
 
 // Network Model for Event Data.
@@ -18,7 +20,9 @@ data class NetworkEventData(
     @SerializedName("nama") val nama: String?,
     @SerializedName("deskripsi") val deskripsi: String?,
     @SerializedName("tanggal") val tanggal: String?,
-    @SerializedName("image") val imageUrl: String?
+    @SerializedName("image") val imageUrl: String?,
+    @SerializedName("alarmEnabled") val alarmEnabled: Boolean?,
+    @SerializedName("alarmTime") val alarmTime: String?
 ) {
     @RequiresApi(Build.VERSION_CODES.O)
     fun toDomain(): EventData = EventData(
@@ -29,6 +33,8 @@ data class NetworkEventData(
         } catch (_: Exception) {
             LocalDate.now()
         },
-        imageUrl = imageUrl ?: ""
+        imageUrl = imageUrl ?: "",
+        alarmEnabled = alarmEnabled ?: false,
+        alarmTime = alarmTime
     )
 }

@@ -2,30 +2,31 @@ package com.example.praktam_2417051065.ui.components
 
 import android.annotation.SuppressLint
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-//import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
-//import com.example.praktam_2417051065.MainViewModel
-import com.example.praktam_2417051065.Repository
+import com.example.praktam_2417051065.MainViewModel
 import com.example.praktam_2417051065.data.model.EventCluster
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
@@ -33,7 +34,9 @@ import java.util.Calendar
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Unit, onSel: (EventCluster?) -> Unit, repo: Repository, modifier: Modifier) = Box(modifier.fillMaxHeight()) {
+fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Unit, onSel: (EventCluster?) -> Unit, viewModel: MainViewModel, modifier: Modifier) = Box(modifier.fillMaxHeight()) {
+    val currentAccount by viewModel.currentAccount.collectAsState()
+
     Row(
         modifier = Modifier
             .fillMaxSize()
@@ -55,7 +58,8 @@ fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Un
             text = { Text("All Clusters", style = MaterialTheme.typography.bodyMedium) },
             onClick = { onSel(null); onExp(false) }
         )
-        repo.currentCluster.forEach { c ->
+        viewModel.currentCluster.forEach { c ->
+            val isOwned = c.owner != null && currentAccount != null && c.owner == currentAccount?.uid
             DropdownMenuItem(
                 text = {
                     Column {
@@ -63,53 +67,82 @@ fun ClusterSelector(cluster: EventCluster?, exp: Boolean, onExp: (Boolean) -> Un
                         Text(c.deskripsiCluster, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                onClick = { onSel(c); onExp(false) }
+                onClick = { onSel(c); onExp(false) },
+                modifier = Modifier
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                    .then(
+                        if (isOwned) Modifier.border(BorderStroke(2.dp, Color(0xFFFF9800)), RoundedCornerShape(8.dp))
+                        else Modifier
+                    )
             )
         }
     }
 }
 
-@Composable
-fun ViewTypeSelector(type: Int, onSel: (Int) -> Unit) = Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-    repeat(3) { i ->
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
-                .background(
-                    if (type == i) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                    RoundedCornerShape(8.dp)
-                )
-                .clickable { onSel(i) },
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = (i + 1).toString(),
-                color = if (type == i) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-    }
-}
+
 
 @Composable
 fun InputColorChoice(selectedColor: Color, onColorChange: (Color) -> Unit) {
     val controller = rememberColorPickerController()
-    Column {
+
+    LaunchedEffect(selectedColor) {
+        controller.selectByColor(selectedColor, false)
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Pilih Warna Cluster:", style = MaterialTheme.typography.titleSmall)
-        HsvColorPicker(
+        Row(
             modifier = Modifier.fillMaxWidth().height(150.dp),
-            controller = controller,
-            onColorChanged = { colorEnvelope ->
-                onColorChange(colorEnvelope.color)
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            HsvColorPicker(
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                controller = controller,
+                onColorChanged = { colorEnvelope ->
+                    if (colorEnvelope.fromUser) {
+                        onColorChange(colorEnvelope.color)
+                    }
+                }
+            )
+            Column(
+                modifier = Modifier.width(120.dp).fillMaxHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .background(selectedColor, RoundedCornerShape(4.dp))
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                )
+
+                var hexText by remember(selectedColor) {
+                    mutableStateOf(String.format("#%06X", 0xFFFFFF and selectedColor.toArgb()))
+                }
+
+                OutlinedTextField(
+                    value = hexText,
+                    onValueChange = { newValue ->
+                        hexText = newValue
+                        try {
+                            if (newValue.length == 7 || newValue.length == 9) {
+                                val color = Color(android.graphics.Color.parseColor(newValue))
+                                onColorChange(color)
+                            }
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = MaterialTheme.typography.bodySmall,
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent
+                    )
+                )
             }
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(20.dp)
-                .background(selectedColor, RoundedCornerShape(4.dp))
-        )
+        }
     }
 }
 
@@ -159,6 +192,34 @@ fun UploadImage(value: Any?, onValueChange: (Any?) -> Unit, label: @Composable (
             launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         }) {
             Text("Pilih Gambar")
+        }
+    }
+}
+
+@SuppressLint("DefaultLocale")
+@Composable
+fun InputTimeChoice(value: String, onValueChange: (String) -> Unit, label: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+    
+    val timePickerDialog = TimePickerDialog(
+        context,
+        { _, hourOfDay, minute ->
+            val formattedTime = String.format("%02d:%02d", hourOfDay, minute)
+            onValueChange(formattedTime)
+        },
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true
+    )
+
+    Column {
+        label()
+        OutlinedButton(
+            onClick = { timePickerDialog.show() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(value.ifEmpty { "Pilih Jam" })
         }
     }
 }
