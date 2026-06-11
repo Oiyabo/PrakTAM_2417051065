@@ -202,7 +202,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             try {
-                val fetched = repository.fetchFromFirestore()
+                val account = _currentAccount.value
+                val fetched = if (account != null) {
+                    repository.fetchFromFirestore(account.uid)
+                } else {
+                    emptyList()
+                }
                 _currentCluster.clear()
                 _currentCluster.addAll(fetched)
                 _uiState.value = UiState.Success
@@ -242,8 +247,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val existingLocal = _currentCluster.find { it.id == shareCode }
             if (existingLocal != null) {
-                if (existingLocal.owner == account.uid) {
-                    onFailure("Cluster ini sudah menjadi milik Anda.")
+                if (existingLocal.owner == account.uid || existingLocal.viewers.contains(account.uid)) {
+                    onFailure("Cluster ini sudah ada di daftar Anda.")
                     return@launch
                 }
             }
@@ -251,18 +256,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val clusterFromDb = repository.getClusterById(shareCode)
                 if (clusterFromDb != null) {
-                    // Create a duplicate cluster with the new owner and a new ID
-                    val newCluster = clusterFromDb.copy(
-                        id = java.util.UUID.randomUUID().toString(),
-                        owner = account.uid
-                    )
-                    
-                    val success = repository.saveClusterToFirestore(newCluster)
+                    val success = repository.addViewerToCluster(shareCode, account.uid)
                     if (success) {
-                        saveClusterLocal(newCluster)
+                        // Create a local copy with the updated viewers list so it reflects immediately
+                        val updatedViewers = clusterFromDb.viewers.toMutableList()
+                        updatedViewers.add(account.uid)
+                        val updatedCluster = clusterFromDb.copy(viewers = updatedViewers)
+                        
+                        saveClusterLocal(updatedCluster)
                         onSuccess()
                     } else {
-                        onFailure("Gagal menyimpan cluster.")
+                        onFailure("Gagal menambahkan Anda ke cluster.")
                     }
                 } else {
                     onFailure("Cluster tidak ditemukan.")

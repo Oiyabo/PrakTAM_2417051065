@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.toArgb
 import com.example.praktam_2417051065.data.model.EventCluster
 import com.example.praktam_2417051065.data.model.EventData
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 import java.time.LocalDate
@@ -27,6 +28,7 @@ class Repository {
             "deskripsiCluster" to newCluster.deskripsiCluster,
             "color" to newCluster.color.toArgb().toLong(),
             "owner" to newCluster.owner,
+            "viewers" to newCluster.viewers,
             "daftarEvent" to newCluster.daftarEvent.map { event ->
                 mapOf(
                     "nama" to event.nama,
@@ -51,39 +53,59 @@ class Repository {
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
-    suspend fun fetchFromFirestore(): List<EventCluster> {
+    suspend fun fetchFromFirestore(uid: String?): List<EventCluster> {
         return try {
-            val result = firestore.collection("eventClusters").get().await()
+            if (uid == null) return emptyList()
+            
+            // Query for clusters where the user is the owner
+            val ownerResult = firestore.collection("eventClusters").whereEqualTo("owner", uid).get().await()
+            // Query for clusters where the user is in the viewers array
+            val viewerResult = firestore.collection("eventClusters").whereArrayContains("viewers", uid).get().await()
+            
             val clusters = mutableListOf<EventCluster>()
-            for (document in result) {
-                val id = document.getString("id") ?: document.id
-                val namaCluster = document.getString("namaCluster") ?: "Cluster Tanpa Nama"
-                val deskripsiCluster = document.getString("deskripsiCluster") ?: ""
-                val colorLong = document.getLong("color") ?: 0xFF808080L
-                val color = Color(colorLong.toInt())
+            val processedIds = mutableSetOf<String>()
+            
+            // Helper function to process documents to avoid duplication
+            fun processDocuments(documents: Iterable<com.google.firebase.firestore.DocumentSnapshot>) {
+                for (document in documents) {
+                    val id = document.getString("id") ?: document.id
+                    if (processedIds.contains(id)) continue
+                    processedIds.add(id)
+                    
+                    val namaCluster = document.getString("namaCluster") ?: "Cluster Tanpa Nama"
+                    val deskripsiCluster = document.getString("deskripsiCluster") ?: ""
+                    val colorLong = document.getLong("color") ?: 0xFF808080L
+                    val color = Color(colorLong.toInt())
 
-                @Suppress("UNCHECKED_CAST")
-                val daftarEventList = document.get("daftarEvent") as? List<Map<String, Any>> ?: emptyList()
+                    @Suppress("UNCHECKED_CAST")
+                    val daftarEventList = document.get("daftarEvent") as? List<Map<String, Any>> ?: emptyList()
 
-                val events = daftarEventList.map { eventMap ->
-                    val nama = eventMap["nama"] as? String ?: ""
-                    val deskripsi = eventMap["deskripsi"] as? String ?: ""
-                    val tanggalStr = eventMap["tanggal"] as? String ?: ""
-                    val tanggal = try {
-                        LocalDate.parse(tanggalStr)
-                    } catch (e: Exception) {
-                        LocalDate.now()
+                    val events = daftarEventList.map { eventMap ->
+                        val nama = eventMap["nama"] as? String ?: ""
+                        val deskripsi = eventMap["deskripsi"] as? String ?: ""
+                        val tanggalStr = eventMap["tanggal"] as? String ?: ""
+                        val tanggal = try {
+                            LocalDate.parse(tanggalStr)
+                        } catch (e: Exception) {
+                            LocalDate.now()
+                        }
+                        val imageUrl = eventMap["image"] as? String ?: ""
+                        val alarmEnabled = eventMap["alarmEnabled"] as? Boolean ?: false
+                        val alarmTime = eventMap["alarmTime"] as? String
+                        EventData(nama, deskripsi, tanggal, imageUrl, alarmEnabled, alarmTime)
                     }
-                    val imageUrl = eventMap["image"] as? String ?: ""
-                    val alarmEnabled = eventMap["alarmEnabled"] as? Boolean ?: false
-                    val alarmTime = eventMap["alarmTime"] as? String
-                    EventData(nama, deskripsi, tanggal, imageUrl, alarmEnabled, alarmTime)
+
+                    val owner = document.getString("owner")
+                    @Suppress("UNCHECKED_CAST")
+                    val viewers = document.get("viewers") as? List<String> ?: emptyList()
+
+                    clusters.add(EventCluster(id, namaCluster, deskripsiCluster, events, color, owner, viewers))
                 }
-
-                val owner = document.getString("owner")
-
-                clusters.add(EventCluster(id, namaCluster, deskripsiCluster, events, color, owner))
             }
+            
+            processDocuments(ownerResult.documents)
+            processDocuments(viewerResult.documents)
+            
             Log.d(TAG, "Successfully fetched ${clusters.size} clusters from Firestore")
             clusters
         } catch (exception: Exception) {
@@ -122,14 +144,27 @@ class Repository {
                 }
 
                 val owner = document.getString("owner")
+                @Suppress("UNCHECKED_CAST")
+                val viewers = document.get("viewers") as? List<String> ?: emptyList()
 
-                EventCluster(docId, namaCluster, deskripsiCluster, events, color, owner)
+                EventCluster(docId, namaCluster, deskripsiCluster, events, color, owner, viewers)
             } else {
                 null
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error fetching cluster by ID", e)
             null
+        }
+    }
+
+    suspend fun addViewerToCluster(clusterId: String, uid: String): Boolean {
+        return try {
+            firestore.collection("eventClusters").document(clusterId)
+                .update("viewers", FieldValue.arrayUnion(uid)).await()
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error adding viewer to cluster", e)
+            false
         }
     }
 

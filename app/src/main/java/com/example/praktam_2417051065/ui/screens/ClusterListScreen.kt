@@ -35,14 +35,17 @@ fun ClusterListScreen(navCon: NavController, viewModel: MainViewModel) {
     var shareCodeInput by remember { mutableStateOf("") }
     var highlightedCluster by remember { mutableStateOf<EventCluster?>(null) }
     var isLoadingAdd by remember { mutableStateOf(false) }
+    var isNavigating by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val currentAccount by viewModel.currentAccount.collectAsState()
     
-    // Only show clusters owned by the current user
+    // Show clusters owned by the current user OR where the user is a viewer
     val userClusters = viewModel.currentCluster.filter { 
-        it.owner != null && currentAccount != null && it.owner == currentAccount?.uid 
+        val isOwner = it.owner != null && currentAccount != null && it.owner == currentAccount?.uid
+        val isViewer = currentAccount != null && it.viewers.contains(currentAccount?.uid)
+        isOwner || isViewer
     }
 
     Scaffold(
@@ -137,8 +140,11 @@ fun ClusterListScreen(navCon: NavController, viewModel: MainViewModel) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    viewModel.selectedClusterForFilter = null
-                                    navCon.popBackStack()
+                                    if (!isNavigating) {
+                                        isNavigating = true
+                                        viewModel.selectedClusterForFilter = null
+                                        navCon.popBackStack()
+                                    }
                                 },
                             colors = CardDefaults.cardColors(
                                 containerColor = if (viewModel.selectedClusterForFilter == null) 
@@ -162,8 +168,11 @@ fun ClusterListScreen(navCon: NavController, viewModel: MainViewModel) {
                                 .combinedClickable(
                                     onClick = { highlightedCluster = cluster },
                                     onDoubleClick = {
-                                        viewModel.selectedClusterForFilter = cluster
-                                        navCon.popBackStack()
+                                        if (!isNavigating) {
+                                            isNavigating = true
+                                            viewModel.selectedClusterForFilter = cluster
+                                            navCon.popBackStack()
+                                        }
                                     }
                                 ),
                             colors = CardDefaults.cardColors(
@@ -200,6 +209,7 @@ fun ClusterListScreen(navCon: NavController, viewModel: MainViewModel) {
             
             // Bottom section: Share Code of highlighted cluster
             if (highlightedCluster != null) {
+                val isOwner = currentAccount != null && highlightedCluster?.owner == currentAccount?.uid
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.elevatedCardColors(
@@ -210,37 +220,48 @@ fun ClusterListScreen(navCon: NavController, viewModel: MainViewModel) {
                         modifier = Modifier.padding(16.dp).fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Share Code: ${highlightedCluster?.namaCluster}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = highlightedCluster?.id ?: "",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Button(
-                                onClick = {
-                                    highlightedCluster?.id?.let {
-                                        clipboardManager.setText(AnnotatedString(it))
-                                        Toast.makeText(context, "Share Code disalin", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                )
+                        Text(
+                            text = if (isOwner) "Share Code: ${highlightedCluster?.namaCluster}" else "Informasi Cluster: ${highlightedCluster?.namaCluster}", 
+                            fontWeight = FontWeight.Bold, 
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        
+                        if (isOwner) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Copy")
+                                Text(
+                                    text = highlightedCluster?.id ?: "",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Button(
+                                    onClick = {
+                                        highlightedCluster?.id?.let {
+                                            clipboardManager.setText(AnnotatedString(it))
+                                            Toast.makeText(context, "Share Code disalin", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Text("Copy")
+                                }
                             }
+                            Text("Bagikan kode ini agar orang lain dapat menambahkan cluster ini.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        } else {
+                            Text("Hanya pembuat (owner) yang dapat membagikan kode cluster ini.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
-                        Text("Bagikan kode ini agar orang lain dapat menambahkan cluster ini.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
                     }
                 }
             } else if (userClusters.isNotEmpty()) {
                 Text(
-                    "Klik sekali pada cluster untuk melihat Share Code.\nKlik ganda (double-click) untuk memfilter kalender.", 
+                    "Klik sekali pada cluster untuk melihat detail.\nKlik ganda (double-click) untuk memfilter kalender.", 
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
