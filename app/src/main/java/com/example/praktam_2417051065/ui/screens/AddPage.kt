@@ -234,6 +234,7 @@ fun AddPage(navCon: NavController, viewModel: MainViewModel) {
                             }
 
                             val newCluster = EventCluster(
+                                id = clusterToEdit?.id ?: java.util.UUID.randomUUID().toString(),
                                 namaCluster = clusterNama,
                                 deskripsiCluster = clusterDeskripsi,
                                 color = clusterColor,

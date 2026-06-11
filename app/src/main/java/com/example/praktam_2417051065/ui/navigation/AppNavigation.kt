@@ -14,6 +14,7 @@ import com.example.praktam_2417051065.MainViewModel
 import com.example.praktam_2417051065.ui.screens.AddPage
 import com.example.praktam_2417051065.ui.screens.DaftarEventScreen
 import com.example.praktam_2417051065.ui.screens.LoginScreen
+import com.example.praktam_2417051065.ui.screens.ClusterListScreen
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -44,6 +45,14 @@ fun AppNavigation(navController: NavHostController, viewModel: MainViewModel) {
                 color = MaterialTheme.colorScheme.background
             ) {
                 LoginScreen(navController, viewModel)
+            }
+        }
+        composable("clusterList") {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                ClusterListScreen(navController, viewModel)
             }
         }
     }

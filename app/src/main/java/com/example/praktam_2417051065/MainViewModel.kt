@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 import com.example.praktam_2417051065.data.repo.UserPreferences
 import com.example.praktam_2417051065.data.repo.SavedAccount
@@ -45,6 +47,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     var selectedClusterToEdit: EventCluster? = null
     var selectedEventToHighlight: EventData? = null
+    
+    var selectedClusterForFilter by androidx.compose.runtime.mutableStateOf<EventCluster?>(null)
 
     // Set the currently active local session (synchronously or manually)
     fun setCurrentAccount(account: SavedAccount?) {
@@ -210,7 +214,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun saveClusterLocal(newCluster: EventCluster) {
-        val existingIndex = _currentCluster.indexOfFirst { it.namaCluster == newCluster.namaCluster }
+        val existingIndex = _currentCluster.indexOfFirst { it.id == newCluster.id }
         if (existingIndex != -1) {
             _currentCluster[existingIndex] = newCluster
         } else {
@@ -221,6 +225,52 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun saveClusterToFirestore(newCluster: EventCluster): Boolean {
         return repository.saveClusterToFirestore(newCluster)
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun addClusterFromShareCode(
+        shareCode: String,
+        onSuccess: () -> Unit,
+        onFailure: (String) -> Unit
+    ) {
+        val account = _currentAccount.value
+        if (account == null) {
+            onFailure("Harap login terlebih dahulu.")
+            return
+        }
+
+        viewModelScope.launch {
+            val existingLocal = _currentCluster.find { it.id == shareCode }
+            if (existingLocal != null) {
+                if (existingLocal.owner == account.uid) {
+                    onFailure("Cluster ini sudah menjadi milik Anda.")
+                    return@launch
+                }
+            }
+
+            try {
+                val clusterFromDb = repository.getClusterById(shareCode)
+                if (clusterFromDb != null) {
+                    // Create a duplicate cluster with the new owner and a new ID
+                    val newCluster = clusterFromDb.copy(
+                        id = java.util.UUID.randomUUID().toString(),
+                        owner = account.uid
+                    )
+                    
+                    val success = repository.saveClusterToFirestore(newCluster)
+                    if (success) {
+                        saveClusterLocal(newCluster)
+                        onSuccess()
+                    } else {
+                        onFailure("Gagal menyimpan cluster.")
+                    }
+                } else {
+                    onFailure("Cluster tidak ditemukan.")
+                }
+            } catch (e: Exception) {
+                onFailure(e.message ?: "Terjadi kesalahan.")
+            }
+        }
     }
 
     suspend fun uploadImageToStorage(uri: Uri, clusterName: String, eventName: String): String? {

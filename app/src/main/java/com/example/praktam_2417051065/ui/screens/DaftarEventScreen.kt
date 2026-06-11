@@ -51,7 +51,6 @@ fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
     
     val selectedEvent = remember { mutableStateOf<EventData?>(null) }
     var expanded by remember { mutableStateOf(false) }
-    var selectedCluster by remember { mutableStateOf<EventCluster?>(null) }
     var showAccountSheet by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -96,8 +95,8 @@ fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
         }
     }
 
-    val displayEvents = remember(selectedCluster, selectedDate, focusOnDate, viewModel.currentCluster.size) {
-        val base = selectedCluster?.daftarEvent ?: viewModel.currentCluster.flatMap { it.daftarEvent }
+    val displayEvents = remember(viewModel.selectedClusterForFilter, selectedDate, focusOnDate, viewModel.currentCluster.size) {
+        val base = viewModel.selectedClusterForFilter?.daftarEvent ?: viewModel.currentCluster.flatMap { it.daftarEvent }
         val filtered = base.filter { e ->
             when (focusOnDate) {
                 0 -> e.tanggal == selectedDate
@@ -142,19 +141,22 @@ fun DaftarEventScreen(navCon: NavController, viewModel: MainViewModel) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ClusterSelector(
-                    selectedCluster,
-                    expanded,
-                    { expanded = it },
-                    { selectedCluster = it },
-                    viewModel,
-                    Modifier.weight(1f).height(56.dp)
-                )
+                FloatingActionButton(
+                    onClick = {
+                        navCon.navigate("clusterList")
+                    },
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    val clusterName = viewModel.selectedClusterForFilter?.namaCluster ?: "All Clusters"
+                    Text(clusterName, modifier = Modifier.padding(horizontal = 16.dp), maxLines = 1, fontWeight = FontWeight.Bold)
+                }
 
-                if (selectedCluster != null && selectedCluster?.owner != null && currentAccount != null && selectedCluster?.owner == currentAccount?.uid) {
+                if (viewModel.selectedClusterForFilter != null && viewModel.selectedClusterForFilter?.owner != null && currentAccount != null && viewModel.selectedClusterForFilter?.owner == currentAccount?.uid) {
                     FloatingActionButton(
                         onClick = {
-                            viewModel.selectedClusterToEdit = selectedCluster
+                            viewModel.selectedClusterToEdit = viewModel.selectedClusterForFilter
                             navCon.navigate("addPage")
                         },
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,

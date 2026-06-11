@@ -11,6 +11,7 @@ import androidx.core.graphics.toColorInt
  * Domain Model for Event Cluster used in UI.
  */
 data class EventCluster(
+    val id: String = java.util.UUID.randomUUID().toString(),
     val namaCluster: String,
     val deskripsiCluster: String,
     val daftarEvent: List<EventData>,
@@ -29,6 +30,7 @@ data class DataClusterResponse(
  * Network Model for Event Cluster used for Retrofit/GSON.
  */
 data class NetworkEventCluster(
+    @SerializedName("id") val id: String?,
     @SerializedName("namaCluster") val namaCluster: String?,
     @SerializedName("deskripsiCluster") val deskripsiCluster: String?,
     @SerializedName("daftarEvent") val daftarEvent: List<NetworkEventData>?,
@@ -37,6 +39,7 @@ data class NetworkEventCluster(
 ) {
     @RequiresApi(Build.VERSION_CODES.O)
     fun toDomain(): EventCluster = EventCluster(
+        id = id ?: java.util.UUID.randomUUID().toString(),
         namaCluster = namaCluster ?: "Cluster Tanpa Nama",
         deskripsiCluster = deskripsiCluster ?: "",
         daftarEvent = daftarEvent?.map { it.toDomain() } ?: emptyList(),

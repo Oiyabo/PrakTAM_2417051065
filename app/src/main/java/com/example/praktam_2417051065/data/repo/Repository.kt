@@ -22,6 +22,7 @@ class Repository {
     @RequiresApi(Build.VERSION_CODES.O)
     suspend fun saveClusterToFirestore(newCluster: EventCluster): Boolean {
         val clusterData = mapOf(
+            "id" to newCluster.id,
             "namaCluster" to newCluster.namaCluster,
             "deskripsiCluster" to newCluster.deskripsiCluster,
             "color" to newCluster.color.toArgb().toLong(),
@@ -39,9 +40,9 @@ class Repository {
         )
 
         return try {
-            firestore.collection("eventClusters").document(newCluster.namaCluster)
+            firestore.collection("eventClusters").document(newCluster.id)
                 .set(clusterData).await()
-            Log.d(TAG, "Cluster successfully saved to Firestore: ${newCluster.namaCluster}")
+            Log.d(TAG, "Cluster successfully saved to Firestore: ${newCluster.id}")
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error saving cluster to Firestore", e)
@@ -55,7 +56,8 @@ class Repository {
             val result = firestore.collection("eventClusters").get().await()
             val clusters = mutableListOf<EventCluster>()
             for (document in result) {
-                val namaCluster = document.getString("namaCluster") ?: document.id
+                val id = document.getString("id") ?: document.id
+                val namaCluster = document.getString("namaCluster") ?: "Cluster Tanpa Nama"
                 val deskripsiCluster = document.getString("deskripsiCluster") ?: ""
                 val colorLong = document.getLong("color") ?: 0xFF808080L
                 val color = Color(colorLong.toInt())
@@ -80,13 +82,54 @@ class Repository {
 
                 val owner = document.getString("owner")
 
-                clusters.add(EventCluster(namaCluster, deskripsiCluster, events, color, owner))
+                clusters.add(EventCluster(id, namaCluster, deskripsiCluster, events, color, owner))
             }
             Log.d(TAG, "Successfully fetched ${clusters.size} clusters from Firestore")
             clusters
         } catch (exception: Exception) {
             Log.e(TAG, "Error fetching from Firestore", exception)
             emptyList()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    suspend fun getClusterById(id: String): EventCluster? {
+        return try {
+            val document = firestore.collection("eventClusters").document(id).get().await()
+            if (document.exists()) {
+                val docId = document.getString("id") ?: document.id
+                val namaCluster = document.getString("namaCluster") ?: "Cluster Tanpa Nama"
+                val deskripsiCluster = document.getString("deskripsiCluster") ?: ""
+                val colorLong = document.getLong("color") ?: 0xFF808080L
+                val color = Color(colorLong.toInt())
+
+                @Suppress("UNCHECKED_CAST")
+                val daftarEventList = document.get("daftarEvent") as? List<Map<String, Any>> ?: emptyList()
+
+                val events = daftarEventList.map { eventMap ->
+                    val nama = eventMap["nama"] as? String ?: ""
+                    val deskripsi = eventMap["deskripsi"] as? String ?: ""
+                    val tanggalStr = eventMap["tanggal"] as? String ?: ""
+                    val tanggal = try {
+                        LocalDate.parse(tanggalStr)
+                    } catch (e: Exception) {
+                        LocalDate.now()
+                    }
+                    val imageUrl = eventMap["image"] as? String ?: ""
+                    val alarmEnabled = eventMap["alarmEnabled"] as? Boolean ?: false
+                    val alarmTime = eventMap["alarmTime"] as? String
+                    EventData(nama, deskripsi, tanggal, imageUrl, alarmEnabled, alarmTime)
+                }
+
+                val owner = document.getString("owner")
+
+                EventCluster(docId, namaCluster, deskripsiCluster, events, color, owner)
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error fetching cluster by ID", e)
+            null
         }
     }
 
